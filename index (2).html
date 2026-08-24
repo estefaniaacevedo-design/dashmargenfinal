@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turbo MX · Torre de Control de Margen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F1F3EF; --card:#FFFFFF; --ink:#14201B; --ink2:#4A574F; --line:#DFE4DD;
+  --red:#C43A2E; --redbg:#FBEAE7; --amber:#B87A12; --amberbg:#FBF1DE;
+  --green:#1C7A5A; --greenbg:#E4F2EC; --blue:#2B5FA6; --bluebg:#E8EFF8;
+  --violet:#5B4BC0; --violetbg:#ECE9F9; --gray:#6E7A72;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 "IBM Plex Sans",sans-serif}
+.wrap{max-width:1320px;margin:0 auto;padding:0 20px 60px}
+header{padding:26px 0 14px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px}
+h1{font:700 26px "Space Grotesk",sans-serif;letter-spacing:-.5px}
+h1 span{color:var(--red)}
+.sub{color:var(--ink2);font-size:13px;margin-top:2px}
+.stamp{font:500 12px "IBM Plex Mono",monospace;color:var(--ink2);text-align:right}
+/* ---- bridge signature ---- */
+.bridge{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0 18px}
+.bcell{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;position:relative}
+.bcell .wk{font:500 11px "IBM Plex Mono",monospace;color:var(--ink2);text-transform:uppercase}
+.bcell .m{font:700 34px "Space Grotesk",sans-serif;letter-spacing:-1px;margin:2px 0}
+.bcell .gs{font-size:12px;color:var(--ink2)}
+.bcell .delta{position:absolute;top:12px;right:14px;font:500 12px "IBM Plex Mono",monospace;padding:2px 7px;border-radius:20px}
+.d-down{background:var(--redbg);color:var(--red)} .d-up{background:var(--greenbg);color:var(--green)}
+.bbar{height:5px;border-radius:3px;margin-top:8px;background:var(--line);overflow:hidden}
+.bbar i{display:block;height:100%}
+/* ---- tabs ---- */
+.tabs{display:flex;gap:6px;border-bottom:2px solid var(--line);margin-bottom:18px;flex-wrap:wrap}
+.tab{padding:9px 16px;cursor:pointer;font:600 14px "IBM Plex Sans";color:var(--ink2);border-bottom:3px solid transparent;margin-bottom:-2px;user-select:none}
+.tab.on{color:var(--ink);border-color:var(--red)}
+.pane{display:none}.pane.on{display:block}
+/* ---- cards / grid ---- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card h3{font:700 15px "Space Grotesk";margin-bottom:10px}
+.card h3 small{font:500 12px "IBM Plex Sans";color:var(--ink2);display:block;margin-top:2px}
+.hl{border-left:4px solid var(--red);padding:10px 14px;background:var(--redbg);border-radius:0 8px 8px 0;margin-bottom:10px;font-size:13.5px}
+.hl.a{border-color:var(--amber);background:var(--amberbg)} .hl.g{border-color:var(--green);background:var(--greenbg)}
+.hl.b{border-color:var(--blue);background:var(--bluebg)} .hl.v{border-color:var(--violet);background:var(--violetbg)}
+.hl b{font-weight:600}
+.num{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+/* ---- ruta ---- */
+.gate{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:12px;align-items:flex-start}
+.gate .n{min-width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 17px "Space Grotesk";color:#fff}
+.gate .body{flex:1}
+.gate h4{font:700 15px "Space Grotesk";margin-bottom:3px}
+.gate p{color:var(--ink2);font-size:13px;margin-bottom:8px}
+.gate .stats{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.gate .st{font-size:12px;color:var(--ink2)} .gate .st b{display:block;font:700 19px "Space Grotesk";color:var(--ink)}
+.btn{display:inline-block;padding:6px 14px;border-radius:7px;border:1px solid var(--ink);background:var(--ink);color:#fff;font:600 12.5px "IBM Plex Sans";cursor:pointer}
+.btn.o{background:transparent;color:var(--ink)}
+/* ---- filters & table ---- */
+.fbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.fbar input,.fbar select{padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:var(--card);font:13px "IBM Plex Sans";color:var(--ink)}
+.fbar input{min-width:220px}
+.chip{padding:5px 11px;border-radius:20px;border:1px solid var(--line);background:var(--card);font:600 12px "IBM Plex Sans";cursor:pointer;color:var(--ink2)}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.count{font:500 12px "IBM Plex Mono";color:var(--ink2);margin-left:auto}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;font-size:12.5px}
+th{background:var(--ink);color:#fff;text-align:left;padding:9px 10px;font:600 11.5px "IBM Plex Sans";cursor:pointer;white-space:nowrap;user-select:none}
+th .arr{opacity:.6}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:hover td{background:#F7F9F6}
+.pname{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.pcat{color:var(--ink2);font-size:11px}
+.neg{color:var(--red);font-weight:600}.pos{color:var(--green)}
+.tag{display:inline-block;padding:1px 7px;border-radius:4px;font:600 10.5px "IBM Plex Sans";margin-right:3px;white-space:nowrap}
+.t-inf{background:var(--amberbg);color:var(--amber)} .t-ched{background:var(--violetbg);color:var(--violet)}
+.t-s3{background:var(--bluebg);color:var(--blue)} .t-crit{background:var(--redbg);color:var(--red)}
+.t-lote{background:#EEF0ED;color:var(--gray)}
+.more{display:block;margin:14px auto;padding:8px 22px}
+svg.spark{display:block}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--ink2);flex-wrap:wrap;margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.note{font-size:12px;color:var(--ink2);margin-top:10px}
+table.mini{font-size:12px;border-radius:8px}
+table.mini th{padding:7px 9px;cursor:default}
+table.mini td{padding:5px 9px;text-align:right;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:11.5px}
+table.mini td:first-child{text-align:left;font-family:"IBM Plex Sans";font-weight:500}
+table.mini tr.wkrow td{background:#EDF1EC;font-weight:700;border-top:2px solid var(--line)}
+table.mini td.neg{color:var(--red)}
+table.mini tr.infrow td{background:var(--amberbg)}
+@media(max-width:900px){.bridge{grid-template-columns:repeat(2,1fr)}.g2,.g3{grid-template-columns:1fr}.pname{max-width:170px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Turbo MX · <span>Torre de Control de Margen</span></h1>
+    <div class="sub">Margen teórico WMS vs facturación SAP (por fecha de orden) · últimas 4 semanas (20 jul – 10 ago 2026) · <span id="hSku"></span> SKUs · <span id="hSt"></span> tiendas</div>
+  </div>
+  <div class="stamp">SEGUIMIENTO_MARGEN_COMPLETO (8).xlsx<br>corte: semana del 10 ago 2026</div>
+</header>
+
+<div class="bridge" id="bridge"></div>
+
+<div class="tabs">
+  <div class="tab on" data-p="p1">Resumen ejecutivo</div>
+  <div class="tab" data-p="p2">Ruta de revisión</div>
+  <div class="tab" data-p="p3">Explorador de SKUs</div>
+  <div class="tab" data-p="p4">Detalle por tienda</div>
+  <div class="tab" data-p="p5">🚩 CH surtido por Turbo</div>
+</div>
+
+<!-- ================= RESUMEN ================= -->
+<div class="pane on" id="p1">
+  <div class="grid g2">
+    <div class="card">
+      <h3>Evolución del margen SAP <small>Barras: profit bruto semanal ($) · Línea: margen %</small></h3>
+      <div id="chEvo"></div>
+    </div>
+    <div class="card">
+      <h3>Highlights automáticos <small>Generados sobre los datos cargados</small></h3>
+      <div id="hlBox"></div>
+    </div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Categorías que destruyen margen <small>Δ profit última semana vs primera de la ventana</small></h3>
+      <div id="chCats"></div>
+    </div>
+    <div class="card">
+      <h3>¿Dónde está la fuga? <small>Composición de la pérdida de la última semana por caso</small></h3>
+      <div id="chLeak"></div>
+      <div class="note">Un SKU puede caer en más de un caso; la barra muestra el profit negativo acumulado 4S de los SKUs de cada grupo.</div>
+    </div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="card">
+    <h3>Infaltables vs resto del portafolio <small>Facturación SAP semanal · impacto de los infaltables en el margen total</small></h3>
+    <div style="overflow-x:auto"><table class="mini" id="tblInf"></table></div>
+    <div class="note" id="infNote"></div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="card">
+    <h3>Margen y contribución por categoría <small>Margen ponderado (Σ profit ÷ Σ venta) y aporte de cada categoría al margen total de la semana</small></h3>
+    <div class="fbar" style="margin-bottom:8px">
+      <span class="chip on" data-cw="3">Última semana</span>
+      <span class="chip" data-cw="all">Acumulado 4 semanas</span>
+    </div>
+    <div style="max-height:420px;overflow-y:auto"><table class="mini" id="tblCatContrib"></table></div>
+    <div class="note">Contribución (pp) = profit de la categoría ÷ venta total: la suma de todas las contribuciones es exactamente el margen total. "% del profit" = profit de la categoría ÷ profit total (puede superar 100% cuando otras categorías restan).</div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="card">
+    <h3>Resumen por rango de margen · SAP semanal <small>Cada SKU se clasifica por su % de margen facturado en la semana</small></h3>
+    <div style="overflow-x:auto"><table class="mini" id="tblRange"></table></div>
+    <div class="note">Misma estructura del Summary X Margin Range mensual, calculada semana a semana sobre los mismos datos SAP del archivo. %Share = ventas del rango / ventas de la semana · %Contribution = profit del rango / ventas de la semana.</div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="card">
+    <h3>Margen facturado (SAP) vs margen teórico (WMS) <small>Última semana · qué margen registró la factura frente al que darían los precios y costos de WMS</small></h3>
+    <div id="sapwmsBox"></div>
+    <div class="note">SAP = margen de la facturación real de la semana. WMS = margen que resultaría de aplicar los precios y costos vigentes en WMS a la misma venta. La brecha entre ambos es el efecto de ajustes de contabilización, rutas de costo y rezago factura-orden — no de pricing.</div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="card">
+    <h3>Margen SAP · solo productos OWNER = Turbo <small>Última semana · el catálogo propio, donde tenemos influencia directa sobre precio y costo</small></h3>
+    <div id="turboBox" style="margin-bottom:10px"></div>
+    <div style="max-height:400px;overflow-y:auto"><table class="mini" id="tblTurbo"></table></div>
+    <div class="note">Solo SKUs cuyo owner es Turbo (catálogo propio). Excluye productos con lote/owner del aliado. Es el margen sobre el que la gestión de pricing propia tiene efecto directo.</div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="card">
+    <h3>Margen SAP por OWNER de la buylist <small>Última semana · de dónde debe venir el producto: Turbo, Chedraui, Nadro, RFP u otro</small></h3>
+    <div style="overflow-x:auto"><table class="mini" id="tblOwner"></table></div>
+    <div class="note">OWNER = dueño del producto en la buylist (quién debe surtirlo). Contribución (pp) = profit del owner ÷ venta total: suma al margen total. Muestra qué proveedor-origen aporta o resta margen.</div>
+  </div>
+</div>
+
+<!-- ================= RUTA ================= -->
+<div class="pane" id="p2">
+  <div id="gates"></div>
+</div>
+
+<!-- ================= EXPLORADOR ================= -->
+<div class="pane" id="p3">
+  <div class="fbar">
+    <input id="q" placeholder="Buscar producto o SKU…">
+    <select id="fCat"><option value="">Todas las categorías</option></select>
+    <select id="fDueno"><option value="">Dueño lote (todos)</option><option>TURBO</option><option>CHEDRAUI</option><option>COMPARTIDO</option></select>
+    <select id="fFuente"><option value="">Fuente precio (todas)</option><option>RETAILER_INTEGRATION_S3</option><option>RETAILER_INTEGRATION_NPI</option><option>BULK_UPLOAD_WMS</option><option>CATALOG_INTEGRATIONS_WMS</option></select>
+    <span class="chip" data-f="inf">Infaltables</span>
+    <span class="chip" data-f="neg">Margen 4S negativo</span>
+    <span class="count" id="cnt"></span>
+  </div>
+  <div class="fbar" id="presets">
+    <span style="font:600 12px 'IBM Plex Sans';color:var(--ink2)">Casos:</span>
+    <span class="chip" data-pre="A">🔴 Sangradores persistentes</span>
+    <span class="chip" data-pre="B">📉 Se voltearon a negativo</span>
+    <span class="chip" data-pre="C">🟣 Lote Chedraui facturando</span>
+    <span class="chip" data-pre="D">🔵 S3 teórico negativo</span>
+    <span class="chip" data-pre="E">⭐ Infaltables críticos</span>
+    <span class="chip" data-pre="F">↔️ Brecha WMS vs SAP</span>
+  </div>
+  <div style="overflow-x:auto"><table id="tbl">
+    <thead><tr>
+      <th data-k="0">SKU</th><th data-k="1">Producto</th>
+      <th>Flags</th>
+      <th data-k="19">Profit 4S $ <span class="arr">▼</span></th>
+      <th>Margen % por semana</th>
+      <th data-k="m4">M% últ. sem.</th>
+      <th data-k="9">M% WMS teórico</th>
+      <th data-k="13">Brecha SAP−WMS</th>
+      <th data-k="24">Δ Precio</th><th data-k="25">Δ Costo</th>
+    </tr></thead>
+    <tbody id="tb"></tbody>
+  </table></div>
+  <button class="btn o more" id="more">Mostrar 250 más</button>
+</div>
+
+<!-- ================= TIENDAS ================= -->
+<div class="pane" id="p4">
+  <div class="fbar">
+    <input id="qs" placeholder="Buscar producto o SKU…">
+    <select id="fTienda"><option value="">Todas las tiendas</option></select>
+    <select id="fSt"><option value="">Estatus (todos)</option><option value="1">1 · Crítico: margen hoy negativo</option><option value="2">2 · Revisar: margen semanal negativo</option></select>
+    <select id="fDueno2"><option value="">Dueño lote (todos)</option><option>TURBO</option><option>CHEDRAUI</option><option>COMPARTIDO</option></select>
+    <select id="fFuente2"><option value="">Fuente precio (todas)</option><option>RETAILER_INTEGRATION_S3</option><option>RETAILER_INTEGRATION_NPI</option><option>BULK_UPLOAD_WMS</option><option>CATALOG_INTEGRATIONS_WMS</option><option>SYNC_MIGRATION</option><option>VIVO_PROMOTION</option></select>
+    <span class="chip" data-f2="inf">Infaltables</span>
+    <span class="count" id="cnt2"></span>
+  </div>
+  <div style="overflow-x:auto"><table>
+    <thead><tr>
+      <th data-s="0">Tienda</th><th data-s="2">Producto</th><th>Flags</th>
+      <th data-s="5">Fuente precio · acción</th>
+      <th data-s="6">Venta WMS $</th><th data-s="7">Margen WMS $ <span class="arr">▲</span></th><th data-s="8">M% WMS</th>
+      <th data-s="9">Precio hoy</th><th data-s="10">Costo hoy</th><th data-s="11">Precio aliado</th><th data-s="12">M% teórico hoy</th>
+    </tr></thead>
+    <tbody id="tb2"></tbody>
+  </table></div>
+  <button class="btn o more" id="more2">Mostrar 300 más</button>
+</div>
+
+<!-- ================= CH SURTIDO POR TURBO ================= -->
+<div class="pane" id="p5">
+  <div class="card">
+    <h3>🚩 Catálogo Chedraui surtido por nosotros <small>Última semana · productos owner = CH que estamos surtiendo como Turbo (dueño de lote real = Turbo)</small></h3>
+    <div id="chsBox" style="margin-bottom:12px"></div>
+    <div class="fbar" style="margin:10px 0">
+      <input id="qsChs" placeholder="Buscar producto o SKU…">
+      <span class="chip" data-fchs="neg">Solo margen negativo</span>
+      <span class="chip" data-fchs="alto">Solo foco alto</span>
+      <span class="count" id="cntChs"></span>
+    </div>
+    <div style="overflow-x:auto"><table class="mini" id="tblChs"></table></div>
+    <div class="note">Estos productos son catálogo del aliado (owner CH) pero los estamos surtiendo nosotros. %Share = venta del producto ÷ venta total de la semana. Foco alto = margen negativo + share >0.5% del total. Priorizar: devolver el surtido a CH, o renegociar costo si nos quedamos con ellos.</div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="card">
+    <h3>Situación por tienda <small>Selecciona un producto de la tabla de arriba para ver su detalle tienda por tienda</small></h3>
+    <div id="chsStoreHint" class="note" style="padding:14px 0">👆 Haz clic en cualquier fila de la tabla de arriba para ver el desglose por tienda de ese producto.</div>
+    <div style="overflow-x:auto"><table class="mini" id="tblChsStore"></table></div>
+  </div>
+</div>
+
+</div>
+<script>
+
+
+// ====== CARGA AUTOMÁTICA DESDE GOOGLE SHEETS (Apps Script vía JSONP) ======
+const API_URL = "https://script.google.com/macros/s/AKfycbyi8dZXB5rvY0eb0fIkK3wqI36Y3gbz_aKm9345S46fa2EeCSCwKrl9yGhfnw1yKjP2/exec";
+function _ov(msg){var el=document.getElementById('ldOv');if(!el){el=document.createElement('div');el.id='ldOv';el.style.cssText='position:fixed;inset:0;background:#F1F3EF;display:flex;align-items:center;justify-content:center;z-index:9999';document.body.appendChild(el);}el.innerHTML='<div style="font:600 17px sans-serif;color:#1E3A5F;text-align:center">'+msg+'</div>';}
+function _hide(){var el=document.getElementById('ldOv');if(el)el.remove();}
+var _tries=0;
+function boot(){
+  _ov('Cargando datos de Turbo MX…');
+  _tries++;
+  // JSONP: inserta un <script> que llama a window.__ondata con los datos.
+  // Evita CORS, que bloquea fetch() directo a Apps Script desde GitHub Pages.
+  window.__ondata = function(D){
+    if(D && D.error){ _ov('Error del servidor: '+D.error); return; }
+    _hide(); try{ init(D); }catch(e){ _ov('Error al dibujar: '+e.message); }
+    if(_s && _s.parentNode) _s.parentNode.removeChild(_s);
+  };
+  var _s = document.createElement('script');
+  _s.src = API_URL + '?callback=__ondata&t=' + Date.now();
+  _s.onerror = function(){ if(_tries<5){ _ov('Reconectando…'); setTimeout(boot,4000);} else { _ov('No se pudo conectar al servidor de datos.'); } };
+  document.body.appendChild(_s);
+}
+function init(D){
+
+
+
+
+
+
+
+
+const K=D.kpi, P=D.p, S=D.s;
+const F={SKU:0,NOM:1,CAT:2,INF:3,DUENO:4,FUENTE:5,TIEN:6,WV:7,WMP:8,WM:9,SGS:10,SMP:11,SM:12,GAP:13,TM:14,MPW:15,MW:16,GSW:17,NEGW:18,MP4:19,SC:20,CRIT:21,CHED:22,S3:23,PV:24,CV:25,UW:26};
+const fmt$=v=>v==null?'—':(v<0?'-$':'$')+Math.abs(Math.round(v)).toLocaleString('es-MX');
+const fmtP=v=>v==null?'—':(v*100).toFixed(1)+'%';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+document.getElementById('hSku').textContent=K.n_sku.toLocaleString();
+document.getElementById('hSt').textContent=K.n_stores;
+
+/* ---------- bridge ---------- */
+(function(){
+  const b=document.getElementById('bridge');
+  K.tot.forEach((t,i)=>{
+    const prev=i>0?K.tot[i-1].m:null;
+    const d=prev==null?null:(t.m-prev)*100;
+    const col=t.m<0.10?'var(--red)':t.m<0.15?'var(--amber)':'var(--green)';
+    b.innerHTML+=`<div class="bcell">
+      <div class="wk">Semana ${K.weeks[i]}</div>
+      <div class="m" style="color:${col}">${(t.m*100).toFixed(1)}%</div>
+      <div class="gs num">Ventas ${fmt$(t.gs)} · Profit ${fmt$(t.mp)}</div>
+      ${d==null?'':`<div class="delta ${d<0?'d-down':'d-up'}">${d>0?'+':''}${d.toFixed(1)} pp</div>`}
+      <div class="bbar"><i style="width:${Math.max(4,t.m/0.25*100)}%;background:${col}"></i></div>
+    </div>`;
+  });
+})();
+
+/* ---------- evolution chart ---------- */
+(function(){
+  const W=560,H=250,pad={l:56,r:46,t:16,b:28};
+  const gs=K.tot.map(t=>t.mp), ms=K.tot.map(t=>t.m);
+  const maxB=Math.max(...gs)*1.15, maxM=0.25;
+  const x=i=>pad.l+(W-pad.l-pad.r)*(i+0.5)/4;
+  const yB=v=>H-pad.b-(H-pad.t-pad.b)*v/maxB;
+  const yM=v=>H-pad.b-(H-pad.t-pad.b)*v/maxM;
+  let s=`<svg class="spark" viewBox="0 0 ${W} ${H}" style="width:100%">`;
+  [0,.25,.5,.75,1].forEach(f=>{const y=H-pad.b-(H-pad.t-pad.b)*f;
+    s+=`<line x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}" stroke="#E5E9E3"/>`;
+    s+=`<text x="${pad.l-6}" y="${y+4}" font-size="10" fill="#6E7A72" text-anchor="end" font-family="IBM Plex Mono">${(maxB*f/1e6).toFixed(1)}M</text>`;
+    s+=`<text x="${W-pad.r+6}" y="${y+4}" font-size="10" fill="#2B5FA6" font-family="IBM Plex Mono">${(maxM*f*100).toFixed(0)}%</text>`;});
+  gs.forEach((v,i)=>{s+=`<rect x="${x(i)-30}" y="${yB(v)}" width="60" height="${H-pad.b-yB(v)}" rx="4" fill="${ms[i]<0.10?'#C43A2E':ms[i]<0.15?'#B87A12':'#1C7A5A'}" opacity=".82"/>`;
+    s+=`<text x="${x(i)}" y="${H-8}" font-size="11" fill="#4A574F" text-anchor="middle" font-family="IBM Plex Sans">${K.weeks[i]}</text>`;
+    s+=`<text x="${x(i)}" y="${yB(v)-6}" font-size="11" fill="#14201B" text-anchor="middle" font-family="IBM Plex Mono">${(v/1e6).toFixed(2)}M</text>`;});
+  s+='<polyline points="'+ms.map((v,i)=>`${x(i)},${yM(v)}`).join(' ')+'" fill="none" stroke="#2B5FA6" stroke-width="2.5"/>';
+  ms.forEach((v,i)=>{s+=`<circle cx="${x(i)}" cy="${yM(v)}" r="4.5" fill="#2B5FA6"/><text x="${x(i)+9}" y="${yM(v)+4}" font-size="11" fill="#2B5FA6" font-family="IBM Plex Mono" font-weight="600">${(v*100).toFixed(1)}%</text>`;});
+  s+='</svg>';
+  document.getElementById('chEvo').innerHTML=s;
+})();
+
+/* ---------- categories chart ---------- */
+(function(){
+  const top=K.cats.slice(0,10);
+  const max=Math.max(...top.map(c=>-c.d));
+  let h='';
+  top.forEach(c=>{
+    h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
+      <div style="width:170px;font-size:12px;text-align:right;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.n)}</div>
+      <div style="flex:1;background:#EEF0ED;border-radius:4px;height:20px;overflow:hidden"><div style="width:${(-c.d)/max*100}%;height:100%;background:var(--red);opacity:.85"></div></div>
+      <div class="num" style="width:88px;font-size:12px;color:var(--red);font-weight:600">${fmt$(c.d)}</div></div>`;
+  });
+  document.getElementById('chCats').innerHTML=h;
+})();
+
+/* ---------- presets ---------- */
+const PRE={
+  A:p=>p[F.NEGW]>=3,
+  B:p=>p[F.MW][0]!=null&&p[F.MW][3]!=null&&p[F.MW][0]>0.03&&p[F.MW][3]<0&&p[F.GSW][3]>1000,
+  C:p=>p[F.CHED]>0&&p[F.SGS]>0,
+  D:p=>p[F.FUENTE]==='RETAILER_INTEGRATION_S3'&&((p[F.TM]!=null&&p[F.TM]<0)||(p[F.SM]!=null&&p[F.SM]<0)),
+  E:p=>p[F.INF]===1&&(p[F.CRIT]>0||(p[F.SM]!=null&&p[F.SM]<0)),
+  F:p=>p[F.WV]>5000&&p[F.GAP]!=null&&Math.abs(p[F.GAP])>0.15,
+};
+const loss=pre=>P.filter(PRE[pre]).reduce((a,p)=>a+Math.min(0,p[F.MP4]||0),0);
+const cntP=pre=>P.filter(PRE[pre]).length;
+
+/* ---------- leak chart ---------- */
+(function(){
+  const items=[
+    ['A','Sangradores persistentes (≥3 sem. en rojo)','var(--red)'],
+    ['E','Infaltables con margen negativo','var(--amber)'],
+    ['D','Precio S3 del aliado con margen negativo','var(--blue)'],
+    ['C','Lote Chedraui entrando a facturación','var(--violet)'],
+    ['B','Se voltearon de positivo a negativo','var(--gray)'],
+  ].map(([k,n,c])=>({k,n,c,v:-loss(k),cnt:cntP(k)}));
+  const max=Math.max(...items.map(i=>i.v));
+  let h='';
+  items.forEach(i=>{
+    h+=`<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span>${i.n} <b>(${i.cnt} SKUs)</b></span><span class="num" style="font-weight:600;color:var(--red)">${fmt$(-i.v)}</span></div>
+    <div style="background:#EEF0ED;border-radius:4px;height:16px;overflow:hidden"><div style="width:${i.v/max*100}%;height:100%;background:${i.c};opacity:.85"></div></div></div>`;
+  });
+  document.getElementById('chLeak').innerHTML=h;
+})();
+
+/* ---------- margin range summary (SAP weekly) ---------- */
+(function(){
+  const buckets=[
+    {n:'Below 0%',t:m=>m<0},
+    {n:'[0% - 10%]',t:m=>m>=0&&m<0.10},
+    {n:'[10% - 20%]',t:m=>m>=0.10&&m<0.20},
+    {n:'[20% - 30%]',t:m=>m>=0.20&&m<0.30},
+    {n:'[30% - 40%]',t:m=>m>=0.30&&m<0.40},
+    {n:'Above 40%',t:m=>m>=0.40},
+  ];
+  const fmtN=v=>Math.round(v).toLocaleString('es-MX');
+  const fmtPar=v=>{const r=fmtN(Math.abs(v));return v<0?`<span class="neg">(${r})</span>`:r;};
+  const fmtPc=v=>{const s=(v*100).toFixed(2)+'%';return v<0?`<span class="neg">${s}</span>`:s;};
+  let h=`<thead><tr><th>SEMANA / RANGO</th><th># SKUs</th><th>UNITS</th><th>GROSS_SALES</th><th>COGS</th><th>GROSS PROFIT</th><th>%SHARE</th><th>%CONTRIBUTION</th><th>Avg Unit Price</th><th>Avg Unit Cost</th><th>% Front Margin</th></tr></thead><tbody>`;
+  for(let w=0;w<4;w++){
+    const rows=P.filter(p=>(p[F.GSW][w]||0)!==0||(p[F.MPW][w]||0)!==0);
+    const totGS=rows.reduce((a,p)=>a+(p[F.GSW][w]||0),0);
+    const totMP=rows.reduce((a,p)=>a+(p[F.MPW][w]||0),0);
+    const totU=rows.reduce((a,p)=>a+(p[F.UW]?(p[F.UW][w]||0):0),0);
+    const totCOGS=totGS-totMP;
+    const rowHTML=(name,r,cls)=>{
+      const gs=r.reduce((a,p)=>a+(p[F.GSW][w]||0),0);
+      const mp=r.reduce((a,p)=>a+(p[F.MPW][w]||0),0);
+      const u=r.reduce((a,p)=>a+(p[F.UW]?(p[F.UW][w]||0):0),0);
+      const cogs=gs-mp;
+      return `<tr class="${cls||''}"><td>${name}</td><td>${r.length.toLocaleString()}</td><td>${fmtN(u)}</td><td>${fmtPar(gs)}</td><td>${fmtPar(-cogs)}</td><td>${fmtPar(mp)}</td><td>${totGS?fmtPc(gs/totGS):'—'}</td><td>${totGS?fmtPc(mp/totGS):'—'}</td><td>${u?fmtPar(gs/u):'—'}</td><td>${u?fmtPar(-cogs/u):'—'}</td><td>${gs?fmtPc(mp/gs):'—'}</td></tr>`;
+    };
+    h+=rowHTML(`Semana ${K.weeks[w]} 2026`,rows,'wkrow');
+    buckets.forEach(b=>{
+      const r=rows.filter(p=>{const g=p[F.GSW][w]||0;const m=g? (p[F.MPW][w]||0)/g : ((p[F.MPW][w]||0)<0?-1:0);return b.t(m);});
+      h+=rowHTML(b.n,r);
+    });
+  }
+  document.getElementById('tblRange').innerHTML=h+'</tbody>';
+})();
+
+/* ---------- infaltables vs resto ---------- */
+(function(){
+  const fmtN=v=>Math.round(v).toLocaleString('es-MX');
+  const fmtPar=v=>{const r=fmtN(Math.abs(v));return v<0?`<span class="neg">(${r})</span>`:r;};
+  const fmtPc=v=>{const s=(v*100).toFixed(2)+'%';return v<0?`<span class="neg">${s}</span>`:s;};
+  let h=`<thead><tr><th>SEMANA / GRUPO</th><th># SKUs</th><th>GROSS_SALES</th><th>GROSS PROFIT</th><th>% Front Margin</th><th>%SHARE ventas</th><th>Peso en el profit</th><th>Margen sin infaltables</th></tr></thead><tbody>`;
+  let lastInf=null,lastTot=null;
+  for(let w=0;w<4;w++){
+    const rows=P.filter(p=>(p[F.GSW][w]||0)!==0||(p[F.MPW][w]||0)!==0);
+    const inf=rows.filter(p=>p[F.INF]===1), rest=rows.filter(p=>p[F.INF]!==1);
+    const s=r=>({gs:r.reduce((a,p)=>a+(p[F.GSW][w]||0),0),mp:r.reduce((a,p)=>a+(p[F.MPW][w]||0),0),n:r.length});
+    const I=s(inf),R=s(rest),T={gs:I.gs+R.gs,mp:I.mp+R.mp};
+    if(w===3){lastInf=I;lastTot=T;}
+    h+=`<tr class="wkrow"><td>Semana ${K.weeks[w]}</td><td>${(I.n+R.n).toLocaleString()}</td><td>${fmtPar(T.gs)}</td><td>${fmtPar(T.mp)}</td><td>${fmtPc(T.mp/T.gs)}</td><td>100.00%</td><td>100.00%</td><td>—</td></tr>`;
+    h+=`<tr class="infrow"><td>⭐ Infaltables</td><td>${I.n.toLocaleString()}</td><td>${fmtPar(I.gs)}</td><td>${fmtPar(I.mp)}</td><td>${fmtPc(I.mp/I.gs)}</td><td>${fmtPc(I.gs/T.gs)}</td><td>${fmtPc(I.mp/T.mp)}</td><td rowspan="2" style="vertical-align:middle;font-weight:700">${fmtPc(R.mp/R.gs)}</td></tr>`;
+    h+=`<tr><td>Resto del portafolio</td><td>${R.n.toLocaleString()}</td><td>${fmtPar(R.gs)}</td><td>${fmtPar(R.mp)}</td><td>${fmtPc(R.mp/R.gs)}</td><td>${fmtPc(R.gs/T.gs)}</td><td>${fmtPc(R.mp/T.mp)}</td></tr>`;
+  }
+  document.getElementById('tblInf').innerHTML=h+'</tbody>';
+  const ppDrag=((lastTot.mp/lastTot.gs)-((lastTot.mp-lastInf.mp)/(lastTot.gs-lastInf.gs)))*100;
+  document.getElementById('infNote').innerHTML=`En la última semana los infaltables representan <b>${(lastInf.gs/lastTot.gs*100).toFixed(1)}%</b> de la venta facturada con margen de <b>${(lastInf.mp/lastInf.gs*100).toFixed(1)}%</b>. Impacto sobre el margen total: <b>${ppDrag>0?'+':''}${ppDrag.toFixed(1)} pp</b> (el margen del negocio sin infaltables sería la última columna).`;
+})();
+
+
+/* ---------- margen y contribución por categoría ---------- */
+(function(){
+  const fmtN=v=>Math.round(v).toLocaleString('es-MX');
+  const fmtPar=v=>{const r=fmtN(Math.abs(v));return v<0?`<span class="neg">(${r})</span>`:r;};
+  const fmtPc=(v,d=2)=>{const s=(v*100).toFixed(d)+'%';return v<0?`<span class="neg">${s}</span>`:s;};
+  const fmtPp=v=>{const s=(v>=0?'+':'')+(v*100).toFixed(2)+' pp';return v<0?`<span class="neg">${s}</span>`:`<span class="pos">${s}</span>`;};
+  function build(mode){
+    const agg={};
+    P.forEach(p=>{
+      let gs=0,mp=0;
+      if(mode==='all'){for(let w=0;w<4;w++){gs+=p[F.GSW][w]||0;mp+=p[F.MPW][w]||0;}}
+      else{gs=p[F.GSW][mode]||0;mp=p[F.MPW][mode]||0;}
+      if(gs===0&&mp===0)return;
+      const c=p[F.CAT]||'—';
+      if(!agg[c])agg[c]={gs:0,mp:0,n:0};
+      agg[c].gs+=gs;agg[c].mp+=mp;agg[c].n++;
+    });
+    const totGS=Object.values(agg).reduce((a,x)=>a+x.gs,0);
+    const totMP=Object.values(agg).reduce((a,x)=>a+x.mp,0);
+    const rows=Object.entries(agg).map(([c,x])=>({c,...x,m:x.gs?x.mp/x.gs:null,contrib:x.mp/totGS,share:x.gs/totGS,pprofit:totMP?x.mp/totMP:null}))
+      .sort((a,b)=>b.contrib-a.contrib);
+    let h=`<thead><tr><th>CATEGORÍA</th><th># SKUs</th><th>VENTA $</th><th>%SHARE VENTA</th><th>PROFIT $</th><th>MARGEN % POND.</th><th>CONTRIBUCIÓN (pp)</th><th>% DEL PROFIT</th></tr></thead><tbody>`;
+    rows.forEach(r=>{
+      h+=`<tr><td>${esc(r.c)}</td><td>${r.n.toLocaleString()}</td><td>${fmtPar(r.gs)}</td><td>${fmtPc(r.share,1)}</td><td>${fmtPar(r.mp)}</td><td>${fmtPc(r.m,1)}</td><td>${fmtPp(r.contrib)}</td><td>${r.pprofit==null?'—':fmtPc(r.pprofit,1)}</td></tr>`;
+    });
+    h+=`<tr class="wkrow"><td>TOTAL</td><td>${rows.reduce((a,r)=>a+r.n,0).toLocaleString()}</td><td>${fmtPar(totGS)}</td><td>100.0%</td><td>${fmtPar(totMP)}</td><td>${fmtPc(totMP/totGS,2)}</td><td>${fmtPp(totMP/totGS)}</td><td>100.0%</td></tr></tbody>`;
+    document.getElementById('tblCatContrib').innerHTML=h;
+  }
+  document.querySelectorAll('[data-cw]').forEach(c=>c.onclick=()=>{
+    document.querySelectorAll('[data-cw]').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on');
+    build(c.dataset.cw==='all'?'all':3);
+  });
+  build(3);
+})();
+
+
+/* ---------- SAP vs WMS + Turbo por categoría ---------- */
+(function(){
+  const fmtN=v=>Math.round(v).toLocaleString('es-MX');
+  const fmtPar=v=>{const r=fmtN(Math.abs(v));return v<0?`<span class="neg">(${r})</span>`:r;};
+  const fmtPc=(v,d=1)=>{const s=(v*100).toFixed(d)+'%';return v<0?`<span class="neg">${s}</span>`:s;};
+  const sw=K.sapwms;
+  if(sw){
+    const gap=(sw.sap_m-sw.wms_m)*100;
+    document.getElementById('sapwmsBox').innerHTML=`
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;padding:12px 14px">
+          <div style="font:600 11px 'IBM Plex Mono';color:var(--ink2);text-transform:uppercase">Margen SAP (facturado)</div>
+          <div style="font:700 30px 'Space Grotesk';color:var(--amber)">${fmtPc(sw.sap_m)}</div>
+          <div style="font-size:11.5px;color:var(--ink2)">Profit ${fmtPar(sw.sap_mp)} · Venta ${fmtN(sw.sap_v)}</div>
+        </div>
+        <div style="flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;padding:12px 14px">
+          <div style="font:600 11px 'IBM Plex Mono';color:var(--ink2);text-transform:uppercase">Margen WMS (teórico)</div>
+          <div style="font:700 30px 'Space Grotesk';color:var(--green)">${fmtPc(sw.wms_m)}</div>
+          <div style="font-size:11.5px;color:var(--ink2)">Margen ${fmtPar(sw.wms_mp)} · Venta ${fmtN(sw.wms_v)}</div>
+        </div>
+        <div style="flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--redbg)">
+          <div style="font:600 11px 'IBM Plex Mono';color:var(--red);text-transform:uppercase">Brecha SAP vs WMS</div>
+          <div style="font:700 30px 'Space Grotesk';color:var(--red)">${gap>=0?'+':''}${gap.toFixed(1)} pp</div>
+          <div style="font-size:11.5px;color:var(--ink2)">Lo que se pierde entre teórico y facturado</div>
+        </div>
+      </div>`;
+  }
+  const tt=K.turbo_tot, tc=K.turbo_cats;
+  if(tt){
+    const totM=K.tot[K.tot.length-1].m;
+    document.getElementById('turboBox').innerHTML=`
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--greenbg)">
+          <div style="font:600 11px 'IBM Plex Mono';color:var(--green);text-transform:uppercase">Margen SAP · Turbo</div>
+          <div style="font:700 30px 'Space Grotesk';color:var(--green)">${fmtPc(tt.m)}</div>
+          <div style="font-size:11.5px;color:var(--ink2)">${tt.sk} SKUs · Profit ${fmtPar(tt.mp)} · Venta ${fmtN(tt.gs)}</div>
+        </div>
+        <div style="flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;padding:12px 14px">
+          <div style="font:600 11px 'IBM Plex Mono';color:var(--ink2);text-transform:uppercase">Margen total (todos)</div>
+          <div style="font:700 30px 'Space Grotesk';color:var(--ink)">${fmtPc(totM)}</div>
+          <div style="font-size:11.5px;color:var(--ink2)">Diferencia: ${((tt.m-totM)*100).toFixed(1)} pp a favor de Turbo</div>
+        </div>
+      </div>`;
+    let h=`<thead><tr><th>CATEGORÍA</th><th># SKUs</th><th>VENTA $</th><th>PROFIT $</th><th>MARGEN %</th></tr></thead><tbody>`;
+    tc.forEach(r=>{h+=`<tr><td>${esc(r.n)}</td><td>${r.sk.toLocaleString()}</td><td>${fmtPar(r.gs)}</td><td>${fmtPar(r.mp)}</td><td>${fmtPc(r.m)}</td></tr>`;});
+    h+=`<tr class="wkrow"><td>TOTAL TURBO</td><td>${tt.sk.toLocaleString()}</td><td>${fmtPar(tt.gs)}</td><td>${fmtPar(tt.mp)}</td><td>${fmtPc(tt.m)}</td></tr></tbody>`;
+    document.getElementById('tblTurbo').innerHTML=h;
+  }
+})();
+
+
+/* ---------- OWNER buylist ---------- */
+(function(){
+  const fmtN=v=>Math.round(v).toLocaleString('es-MX');
+  const fmtPar=v=>{const r=fmtN(Math.abs(v));return v<0?`<span class="neg">(${r})</span>`:r;};
+  const fmtPc=(v,d=1)=>{if(v==null)return '—';const s=(v*100).toFixed(d)+'%';return v<0?`<span class="neg">${s}</span>`:s;};
+  const fmtPp=v=>{const s=(v>=0?'+':'')+(v*100).toFixed(2)+' pp';return v<0?`<span class="neg">${s}</span>`:`<span class="pos">${s}</span>`;};
+  const ow=K.owner_rows;
+  if(ow){
+    let h=`<thead><tr><th>OWNER (buylist)</th><th># SKUs</th><th>VENTA $</th><th>%SHARE</th><th>MARGEN %</th><th>CONTRIB (pp)</th></tr></thead><tbody>`;
+    ow.forEach(r=>{
+      const badge = r.o==='TURBO'?'style="color:var(--green);font-weight:700"':r.o==='CHEDRAUI'?'style="color:var(--red);font-weight:700"':'';
+      h+=`<tr><td ${badge}>${esc(r.o)}</td><td>${r.sk.toLocaleString()}</td><td>${fmtPar(r.gs)}</td><td>${fmtPc(r.sh)}</td><td>${fmtPc(r.m)}</td><td>${fmtPp(r.contrib)}</td></tr>`;
+    });
+    const tgs=ow.reduce((a,r)=>a+r.gs,0), tmp=ow.reduce((a,r)=>a+r.mp,0);
+    h+=`<tr class="wkrow"><td>TOTAL</td><td></td><td>${fmtPar(tgs)}</td><td>100.0%</td><td>${fmtPc(tmp/tgs)}</td><td>${fmtPp(tmp/tgs)}</td></tr></tbody>`;
+    document.getElementById('tblOwner').innerHTML=h;
+  }
+})();
+
+/* ---------- CH surtido por Turbo (pestaña p5) ---------- */
+(function(){
+  const fmtN=v=>Math.round(v).toLocaleString('es-MX');
+  const fmtPar=v=>{const r=fmtN(Math.abs(v));return v<0?`<span class="neg">(${r})</span>`:r;};
+  const fmtPc=(v,d=1)=>{if(v==null)return '—';const s=(v*100).toFixed(d)+'%';return v<0?`<span class="neg">${s}</span>`:s;};
+  const ct=K.chs_tot, cl=K.chs_list||[], store=K.chs_store||{};
+  if(!ct)return;
+  document.getElementById('chsBox').innerHTML=`
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--redbg)">
+        <div style="font:600 11px 'IBM Plex Mono';color:var(--red);text-transform:uppercase">CH surtido por nosotros</div>
+        <div style="font:700 30px 'Space Grotesk';color:var(--red)">${fmtPc(ct.m)}</div>
+        <div style="font-size:11.5px;color:var(--ink2)">${ct.sk} SKUs · Venta ${fmtN(ct.gs)} · Profit ${fmtPar(ct.mp)}</div>
+      </div>
+      <div style="flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;padding:12px 14px">
+        <div style="font:600 11px 'IBM Plex Mono';color:var(--ink2);text-transform:uppercase">SKUs en negativo</div>
+        <div style="font:700 30px 'Space Grotesk';color:var(--ink)">${ct.neg_sk}</div>
+        <div style="font-size:11.5px;color:var(--ink2)">Venta en riesgo ${fmtN(ct.neg_gs)}</div>
+      </div>
+    </div>`;
+  let cur=cl.slice();
+  function foco(r){return (r.m<0 && r.sh>0.005)?'alto':(r.m<0)?'medio':(r.teo!=null&&r.teo<0)?'revisar':'ok';}
+  function focoLabel(f){return f==='alto'?'🔴 ALTO':f==='medio'?'🟠 medio':f==='revisar'?'🟡 revisar':'✓ ok';}
+  function renderList(){
+    let h=`<thead><tr><th>SKU</th><th>PRODUCTO</th><th>CATEGORÍA</th><th>VENTA $</th><th>%SHARE TOTAL</th><th>MARGEN SAP</th><th>TEÓRICO HOY</th><th>FOCO</th></tr></thead><tbody>`;
+    cur.forEach(r=>{
+      const f=foco(r);
+      h+=`<tr data-sku="${r.sku}" style="cursor:pointer"><td>${r.sku}</td><td>${esc(r.n)}${r.s3?' <span style="color:var(--violet);font-size:9px">S3</span>':''}</td><td>${esc(r.cat)}</td><td>${fmtPar(r.gs)}</td><td>${fmtPc(r.sh)}</td><td>${fmtPc(r.m)}</td><td>${r.teo==null?'—':fmtPc(r.teo/100)}</td><td>${focoLabel(f)}</td></tr>`;
+    });
+    h+=`</tbody>`;
+    document.getElementById('tblChs').innerHTML=h;
+    document.getElementById('cntChs').textContent=cur.length+' productos';
+    document.querySelectorAll('#tblChs tr[data-sku]').forEach(tr=>tr.onclick=()=>showStore(+tr.dataset.sku, tr));
+  }
+  function showStore(sku, tr){
+    document.querySelectorAll('#tblChs tr[data-sku]').forEach(x=>x.style.background='');
+    if(tr)tr.style.background='var(--amberbg)';
+    const rows=store[sku]||[];
+    const prod=cl.find(x=>x.sku===sku);
+    document.getElementById('chsStoreHint').style.display='none';
+    let h=`<thead><tr><th>TIENDA</th><th>VENTA WMS $</th><th>MARGEN WMS $</th><th>M% WMS</th><th>PRECIO HOY</th><th>COSTO HOY</th><th>PRECIO ALIADO</th><th>M% TEÓRICO</th></tr></thead><tbody>`;
+    h=`<caption style="text-align:left;padding:6px 4px;font-weight:700;color:var(--ink)">${prod?esc(prod.n):sku} · ${rows.length} tiendas</caption>`+h;
+    rows.forEach(r=>{
+      h+=`<tr><td>${esc(r.t)}</td><td>${r.v==null?'—':fmtPar(r.v)}</td><td>${r.mp==null?'—':fmtPar(r.mp)}</td><td>${fmtPc(r.m)}</td><td>${r.p==null?'—':r.p.toFixed(2)}</td><td>${r.c==null?'—':r.c.toFixed(2)}</td><td>${r.pa==null?'—':r.pa.toFixed(2)}</td><td>${fmtPc(r.teo)}</td></tr>`;
+    });
+    h+=`</tbody>`;
+    document.getElementById('tblChsStore').innerHTML=h;
+  }
+  document.getElementById('qsChs').oninput=e=>{
+    const q=e.target.value.toLowerCase();
+    cur=cl.filter(r=>r.n.toLowerCase().includes(q)||String(r.sku).includes(q));
+    renderList();
+  };
+  document.querySelectorAll('[data-fchs]').forEach(c=>c.onclick=()=>{
+    c.classList.toggle('on');
+    let f=cl.slice();
+    if(document.querySelector('[data-fchs="neg"]').classList.contains('on')) f=f.filter(r=>r.m<0);
+    if(document.querySelector('[data-fchs="alto"]').classList.contains('on')) f=f.filter(r=>foco(r)==='alto');
+    cur=f; renderList();
+  });
+  renderList();
+})();
+
+/* ---------- highlights ---------- */
+(function(){
+  const t=K.tot, drop=(t[0].m-t[3].m)*100, gain=(t[3].m-t[0].m)*100, lostMP=t[0].mp-t[3].mp;
+  const wc=K.cats.slice(0,3).map(c=>c.n).join(', ');
+  const box=document.getElementById('hlBox');
+  const A=cntP('A'), Al=loss('A'), Bc=cntP('B'), Dc=cntP('D'), Ec=cntP('E');
+  box.innerHTML=`
+  ${gain>=0
+    ? `<div class="hl g">📈 El margen SAP <b>subió ${gain.toFixed(1)} pp en 4 semanas</b> (${(t[0].m*100).toFixed(1)}% → ${(t[3].m*100).toFixed(1)}%): son <b class="num">${fmt$(-lostMP)}</b> más de profit semanal con ventas casi planas. La recuperación de margen se está reflejando.</div>`
+    : `<div class="hl">📉 El margen SAP cayó <b>${drop.toFixed(1)} pp en 4 semanas</b> (${(t[0].m*100).toFixed(1)}% → ${(t[3].m*100).toFixed(1)}%): son <b class="num">${fmt$(lostMP)}</b> menos de profit semanal con ventas casi planas. El problema es de margen, no de volumen.</div>`}
+  <div class="hl">🔴 <b>${A} SKUs sangran ≥3 de 4 semanas</b> y acumulan <b class="num">${fmt$(Al)}</b> de pérdida. ${K.bleeders4} llevan las 4 semanas completas en rojo (<span class="num">${fmt$(K.bleeders4_loss)}</span>). Cervezas y tequilas dominan la lista.</div>
+  <div class="hl a">⭐ <b>${K.inf_crit} combinaciones tienda-producto de infaltables</b> tienen margen negativo hoy (≈<span class="num">${fmt$(K.inf_loss)}</span>/sem en WMS). Patrón típico: Chedraui no surte, compramos directo más caro y el precio S3 del aliado no cubre nuestro costo.</div>
+  <div class="hl v">🟣 <b>${K.ched_rows.toLocaleString()} filas tienda-producto son lote CHEDRAUI</b> pero el SKU aparece facturado en SAP. Antes de accionar precio, hay que depurar cuánta de la "pérdida" SAP es facturación que no nos corresponde.</div>
+  <div class="hl b">🔵 <b>${K.s3_neg.toLocaleString()} combinaciones con fuente RETAILER_INTEGRATION_S3</b> tienen margen teórico negativo hoy: el aliado fija un precio por debajo de nuestro costo. No se corrige con pricing propio, se escala al aliado o se corrige el costo de referencia.</div>
+  <div class="hl g">↔️ <b>${K.gap_skus} SKUs con ventas relevantes muestran una brecha >15 pp entre margen WMS y SAP</b> (ej. Tequila Dobel: +17% teórico vs −43% facturado). Ahí está la diferencia entre lo que "deberíamos" ganar y lo que factura SAP.</div>`;
+})();
+
+/* ---------- gates (ruta) ---------- */
+(function(){
+  const g=[
+    {c:'var(--violet)',t:'Depurar: ¿la facturación es nuestra?',pre:'C',
+     d:'Filtra los SKUs cuyo lote actual es CHEDRAUI en la mayoría de tiendas pero que aparecen con venta/COGS en SAP. Todo lo que sea lote del aliado no debe contaminar nuestro P&L. Sin este paso, el resto del análisis mide pérdidas que quizá no existen.',
+     ac:'Acción: cruzar con finanzas/SAP si el flag de lote está llegando bien al ERP y excluir esas líneas del margen propio.'},
+    {c:'var(--red)',t:'Sangradores persistentes (≥3 de 4 semanas en rojo)',pre:'A',
+     d:'SKUs con profit negativo semana tras semana. No son ruido: son fuga estructural. Prioriza por pérdida acumulada 4S; los primeros ~15 SKUs concentran la mayoría del monto.',
+     ac:'Acción: para cada uno, decidir en el comité semanal: subir precio, renegociar costo, cambiar proveedor de lote, o delistar.'},
+    {c:'var(--blue)',t:'Fuente de precio S3: el precio lo pone el aliado',pre:'D',
+     d:'Combinaciones donde el precio viene por RETAILER_INTEGRATION_S3 y el margen teórico de hoy ya es negativo. Aquí no controlas el precio: o el costo de referencia está mal, o el precio del aliado no cubre tu compra directa.',
+     ac:'Acción: separar (a) error de costo en WMS vs (b) precio del aliado real. Los (b) se escalan a Chedraui con evidencia; los (a) se corrigen en catálogo.'},
+    {c:'var(--amber)',t:'Infaltables en crítico',pre:'E',
+     d:'Productos que no pueden faltar y que hoy venden con margen negativo. Son los que compramos directo cuando el aliado no surte: el costo sube y el precio (a veces S3) no lo refleja.',
+     ac:'Acción: definir regla de pricing para compra directa de infaltables (piso de margen aunque el aliado tenga otro precio) y monitorear fill-rate del aliado.'},
+    {c:'var(--gray)',t:'Deterioro reciente: positivos que se voltearon',pre:'B',
+     d:'SKUs que abrían la ventana con margen sano y cerraron la última semana en negativo, con venta relevante. Son los próximos sangradores si nadie actúa. Usa las columnas Δ Precio / Δ Costo para saber si fue costo que subió o precio que bajó.',
+     ac:'Acción: revisar cambios de costo del proveedor y promos activas (hoja Discounts) de la última quincena.'},
+    {c:'var(--green)',t:'Brecha WMS vs SAP: teoría vs realidad',pre:'F',
+     d:'SKUs con venta >$5,000 y más de 15 pp de diferencia entre el margen teórico WMS y el facturado en SAP. Si el teórico es sano y SAP es negativo, el problema está en costos SAP, devoluciones, descuentos o facturación de lote ajeno — no en tu pricing.',
+     ac:'Acción: conciliar contra la hoja Discounts y el costo SAP (OPERATION_CLASS L) de esos SKUs específicos.'},
+  ];
+  let h='';
+  g.forEach((x,i)=>{
+    const n=cntP(x.pre), l=loss(x.pre);
+    h+=`<div class="gate"><div class="n" style="background:${x.c}">${i+1}</div><div class="body">
+      <h4>${x.t}</h4><p>${x.d}</p>
+      <div class="stats"><div class="st"><b>${n.toLocaleString()}</b>SKUs en el caso</div><div class="st"><b class="num" style="color:var(--red)">${fmt$(l)}</b>pérdida 4S de los negativos</div></div>
+      <p style="font-size:12.5px;color:var(--ink)">💡 ${x.ac}</p>
+      <span class="btn" onclick="goPreset('${x.pre}')">Ver los casos →</span>
+    </div></div>`;
+  });
+  document.getElementById('gates').innerHTML=h;
+})();
+
+/* ---------- explorer ---------- */
+let state={q:'',cat:'',dueno:'',fuente:'',inf:false,neg:false,pre:null,sort:F.MP4,dir:1,limit:250};
+const cats=[...new Set(P.map(p=>p[F.CAT]))].sort();
+cats.forEach(c=>{document.getElementById('fCat').innerHTML+=`<option>${esc(c)}</option>`;});
+
+function spark(mw){
+  const W=110,H=26;
+  let s=`<svg class="spark" width="${W}" height="${H}">`;
+  s+=`<line x1="0" y1="${H/2}" x2="${W}" y2="${H/2}" stroke="#E5E9E3"/>`;
+  mw.forEach((v,i)=>{
+    if(v==null)return;
+    const vv=Math.max(-0.5,Math.min(0.5,v));
+    const x=8+i*(W-16)/3, y=H/2-vv*(H-6);
+    const col=v<0?'#C43A2E':'#1C7A5A';
+    s+=`<rect x="${x-4}" y="${Math.min(H/2,y)}" width="8" height="${Math.max(2,Math.abs(H/2-y))}" fill="${col}" rx="1.5"/>`;
+  });
+  return s+'</svg>';
+}
+function rowsFiltered(){
+  let r=P;
+  if(state.pre) r=r.filter(PRE[state.pre]);
+  if(state.q){const q=state.q.toLowerCase();r=r.filter(p=>String(p[F.SKU]).includes(q)||p[F.NOM].toLowerCase().includes(q));}
+  if(state.cat)r=r.filter(p=>p[F.CAT]===state.cat);
+  if(state.dueno)r=r.filter(p=>p[F.DUENO]===state.dueno);
+  if(state.fuente)r=r.filter(p=>p[F.FUENTE]===state.fuente);
+  if(state.inf)r=r.filter(p=>p[F.INF]===1);
+  if(state.neg)r=r.filter(p=>(p[F.MP4]||0)<0);
+  const k=state.sort;
+  r=[...r].sort((a,b)=>{
+    let av=k==='m4'?(a[F.MW][3]??99):(a[k]??(state.dir===1?9e15:-9e15));
+    let bv=k==='m4'?(b[F.MW][3]??99):(b[k]??(state.dir===1?9e15:-9e15));
+    if(typeof av==='string')return state.dir*String(av).localeCompare(bv);
+    return state.dir*(av-bv);
+  });
+  return r;
+}
+function render(){
+  const r=rowsFiltered();
+  document.getElementById('cnt').textContent=r.length.toLocaleString()+' SKUs';
+  const tb=document.getElementById('tb');
+  tb.innerHTML=r.slice(0,state.limit).map(p=>{
+    const tags=[
+      p[F.INF]?'<span class="tag t-inf">INFALTABLE</span>':'',
+      p[F.CHED]>0?`<span class="tag t-ched">CHED ${p[F.CHED]}t</span>`:'',
+      p[F.FUENTE]==='RETAILER_INTEGRATION_S3'?'<span class="tag t-s3">S3</span>':'',
+      p[F.NEGW]>=3?`<span class="tag t-crit">${p[F.NEGW]}/4 rojo</span>`:'',
+    ].join('');
+    const m4=p[F.MW][3];
+    return `<tr>
+      <td class="num">${p[F.SKU]}</td>
+      <td><div class="pname" title="${esc(p[F.NOM])}">${esc(p[F.NOM])}</div><div class="pcat">${esc(p[F.CAT])} · ${esc(p[F.DUENO])} · ${p[F.TIEN]} tiendas</div></td>
+      <td>${tags}</td>
+      <td class="num ${p[F.MP4]<0?'neg':'pos'}">${fmt$(p[F.MP4])}</td>
+      <td>${spark(p[F.MW])}</td>
+      <td class="num ${m4!=null&&m4<0?'neg':''}">${fmtP(m4)}</td>
+      <td class="num">${p[F.TM]==null?'—':p[F.TM].toFixed(1)+'%'}</td>
+      <td class="num ${p[F.GAP]!=null&&p[F.GAP]<-0.1?'neg':''}">${p[F.GAP]==null?'—':((p[F.GAP]*100>0?'+':'')+(p[F.GAP]*100).toFixed(0)+' pp')}</td>
+      <td class="num">${fmtP(p[F.PV])}</td>
+      <td class="num ${p[F.CV]!=null&&p[F.CV]>0.05?'neg':''}">${fmtP(p[F.CV])}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('more').style.display=r.length>state.limit?'block':'none';
+}
+document.getElementById('q').oninput=e=>{state.q=e.target.value;state.limit=250;render();};
+document.getElementById('fCat').onchange=e=>{state.cat=e.target.value;render();};
+document.getElementById('fDueno').onchange=e=>{state.dueno=e.target.value;render();};
+document.getElementById('fFuente').onchange=e=>{state.fuente=e.target.value;render();};
+document.querySelectorAll('[data-f]').forEach(c=>c.onclick=()=>{c.classList.toggle('on');state[c.dataset.f]=c.classList.contains('on');render();});
+document.querySelectorAll('[data-pre]').forEach(c=>c.onclick=()=>{
+  const on=!c.classList.contains('on');
+  document.querySelectorAll('[data-pre]').forEach(x=>x.classList.remove('on'));
+  state.pre=on?c.dataset.pre:null; if(on)c.classList.add('on');
+  state.limit=250; render();
+});
+document.querySelectorAll('#tbl th[data-k]').forEach(th=>th.onclick=()=>{
+  const k=th.dataset.k==='m4'?'m4':+th.dataset.k;
+  if(state.sort===k)state.dir*=-1; else{state.sort=k;state.dir=1;}
+  render();
+});
+document.getElementById('more').onclick=()=>{state.limit+=250;render();};
+function goPreset(pre){
+  document.querySelector('[data-p="p3"]').click();
+  document.querySelectorAll('[data-pre]').forEach(x=>x.classList.toggle('on',x.dataset.pre===pre));
+  state.pre=pre;state.limit=250;render();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ---------- stores tab ---------- */
+let st2={q:'',t:'',st:'',dueno:'',fuente:'',inf:false,sort:7,dir:1,limit:300};
+[...new Set(S.map(s=>s[0]))].sort().forEach(t=>{document.getElementById('fTienda').innerHTML+=`<option>${esc(t)}</option>`;});
+function render2(){
+  let r=S;
+  if(st2.q){const q=st2.q.toLowerCase();r=r.filter(s=>String(s[1]).includes(q)||s[2].toLowerCase().includes(q));}
+  if(st2.t)r=r.filter(s=>s[0]===st2.t);
+  if(st2.st)r=r.filter(s=>s[13]===+st2.st);
+  if(st2.dueno)r=r.filter(s=>s[3]===st2.dueno);
+  if(st2.fuente)r=r.filter(s=>s[5]===st2.fuente);
+  if(st2.inf)r=r.filter(s=>s[4]===1);
+  r=[...r].sort((a,b)=>{const av=a[st2.sort]??9e15,bv=b[st2.sort]??9e15;
+    if(typeof av==='string')return st2.dir*String(av).localeCompare(bv);return st2.dir*(av-bv);});
+  document.getElementById('cnt2').textContent=r.length.toLocaleString()+' casos';
+  const srcTag=f=>{
+    if(f==='RETAILER_INTEGRATION_S3')return '<span class="tag t-s3">S3 · PRECIO DEL ALIADO</span><div class="pcat">No modificable — revisar precio con aliado</div>';
+    if(f==='RETAILER_INTEGRATION_NPI')return '<span class="tag t-lote">NPI</span><div class="pcat">Precio propio ajustable</div>';
+    if(f==='BULK_UPLOAD_WMS')return '<span class="tag t-lote">BULK WMS</span><div class="pcat">Precio propio ajustable</div>';
+    if(f==='CATALOG_INTEGRATIONS_WMS')return '<span class="tag t-lote">CATÁLOGO</span><div class="pcat">Precio propio ajustable</div>';
+    return `<span class="tag t-lote">${esc(f)}</span>`;
+  };
+  document.getElementById('tb2').innerHTML=r.slice(0,st2.limit).map(s=>`<tr>
+    <td>${esc(s[0])}</td>
+    <td><div class="pname" title="${esc(s[2])}">${esc(s[2])}</div><div class="pcat num">SKU ${s[1]}</div></td>
+    <td>${s[13]===1?'<span class="tag t-crit">CRÍTICO</span>':'<span class="tag t-inf" style="background:var(--amberbg)">REVISAR</span>'}${s[4]?'<span class="tag t-inf">INF</span>':''}${s[3]==='CHEDRAUI'?'<span class="tag t-ched">LOTE CHED</span>':s[3]==='COMPARTIDO'?'<span class="tag t-lote">COMPARTIDO</span>':''}</td>
+    <td>${srcTag(s[5])}</td>
+    <td class="num">${fmt$(s[6])}</td>
+    <td class="num ${s[7]<0?'neg':'pos'}">${fmt$(s[7])}</td>
+    <td class="num ${s[8]<0?'neg':''}">${s[8]==null?'—':s[8].toFixed(1)+'%'}</td>
+    <td class="num">${fmt$(s[9])}</td><td class="num">${fmt$(s[10])}</td>
+    <td class="num">${s[11]?fmt$(s[11]):'—'}</td>
+    <td class="num ${s[12]!=null&&s[12]<0?'neg':''}">${s[12]==null?'—':s[12].toFixed(1)+'%'}</td>
+  </tr>`).join('');
+  document.getElementById('more2').style.display=r.length>st2.limit?'block':'none';
+}
+document.getElementById('qs').oninput=e=>{st2.q=e.target.value;st2.limit=300;render2();};
+document.getElementById('fTienda').onchange=e=>{st2.t=e.target.value;render2();};
+document.getElementById('fSt').onchange=e=>{st2.st=e.target.value;render2();};
+document.getElementById('fDueno2').onchange=e=>{st2.dueno=e.target.value;render2();};
+document.getElementById('fFuente2').onchange=e=>{st2.fuente=e.target.value;render2();};
+document.querySelectorAll('[data-f2]').forEach(c=>c.onclick=()=>{c.classList.toggle('on');st2.inf=c.classList.contains('on');render2();});
+document.querySelectorAll('#p4 th[data-s]').forEach(th=>th.onclick=()=>{
+  const k=+th.dataset.s;
+  if(st2.sort===k)st2.dir*=-1;else{st2.sort=k;st2.dir=1;}
+  render2();
+});
+document.getElementById('more2').onclick=()=>{st2.limit+=300;render2();};
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');document.getElementById(t.dataset.p).classList.add('on');
+});
+render();render2();
+
+
+} /* fin init */
+window.addEventListener("DOMContentLoaded", boot);
+</script>
+</body>
+</html>
